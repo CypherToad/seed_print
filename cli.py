@@ -56,7 +56,7 @@ def main():
 
     # Thanks @simulx
     # https://twitter.com/simulx/status/1470894394232516608
-    os.system('qr --ascii "%s" % qr_string')
+    os.system('qr --ascii "%s"' % qr_string)
 
 
 if __name__ == '__main__':
