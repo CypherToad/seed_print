@@ -2,7 +2,7 @@
 
 > **WARNING** This project has mainly been used for local development, use at your own risk, and always use on an air-gapped machine!
 
-A minimal python script for generatin **bip39 seed phrases**, and corresponding [Seed Signer Seed](https://github.com/SeedSigner/seedsigner) seed phrase **qr code**.
+A minimal python script for generating **bip39 seed phrases**, and corresponding [Seed Signer Seed](https://github.com/SeedSigner/seedsigner) seed phrase **qr code** ready for offline printing.
 
 ![screenshot](/examples/screenshoot_v1.png)
 
