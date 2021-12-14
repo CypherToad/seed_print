@@ -1,0 +1,90 @@
+<html>
+
+<head>
+
+  <style>
+    html *
+        {
+           color: #000 !important;
+           font-family: Arial !important;
+        }
+        p.small
+          {
+            font-size: 10px;
+          }
+          @media print {
+             .noprint {
+                visibility: hidden;
+             }
+             @page {
+                 size: auto;
+                 margin: 0;
+             }
+          }
+  </style>
+
+</head>
+
+  <center>
+
+
+      <h1 class="noprint">Seed Print v0.1</h1>
+      <hr class="noprint">
+     <img src="data:image/png;base64,{{seed_qr}}" width = "300", height = "300">
+     <br>
+
+<div class="noprint">
+  <table width=500px>
+
+    <tr>
+      <td>
+        {% for word in words.split()[0:6] %}
+          <p><b>{{ loop.index }}</b>. {{ word }}</p>
+        {% endfor %}
+      </td>
+
+      <td>
+        {% for word in words.split()[6:12] %}
+          <p><b>{{ loop.index + 6}}</b>. {{ word }}</p>
+        {% endfor %}
+      </td>
+
+      <td>
+        {% for word in words.split()[12:18] %}
+          <p><b>{{ loop.index + 12}}</b>. {{ word }}</p>
+        {% endfor %}
+      </td>
+
+      <td>
+        {% for word in words.split()[18:24] %}
+          <p><b>{{ loop.index + 18 }}</b>. {{ word }}</p>
+        {% endfor %}
+      </td>
+    </tr>
+
+  </table>
+
+<br>
+
+  <h3>⚠️ Copy at your own risk ⚠️</h3>
+<textarea disabled rows="5" cols="100">
+{{ words }}
+</textarea>
+
+  <br><br>
+
+<textarea disabled rows="2" cols="100">
+{{ qr_string }}
+</textarea>
+
+    <br><br>
+
+    <button onClick="window.location.reload();">Generate</button>
+
+    <button onClick="window.print();">Print</button>
+</div>
+
+  </center>
+
+
+</html>
