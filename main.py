@@ -78,8 +78,11 @@ def home():
 
     # Thanks for the suggestion @KeithMukai
     # https://twitter.com/KeithMukai/status/1470571942000443392
-    if requests.get('http://bitcoin.org'):
-        return render_template('panic.html')
+    try:
+        if requests.get('http://bitcoin.org'):
+            return render_template('panic.html')
+    except:
+        pass
 
     return render_template(
         'index.html', words=words, seed_qr=seed_qr_base64(words),
