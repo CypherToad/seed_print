@@ -28,10 +28,13 @@
   <center>
 
 
+      <div class="noprint">
       <h1 class="noprint">Seed Print v0.1</h1>
+      <button onClick="window.location.reload();">Generate</button>
+      <button onClick="window.print();">Print</button>
       <hr class="noprint">
-     <img src="data:image/png;base64,{{seed_qr}}" width = "300", height = "300">
-     <br>
+    </div>
+         <img src="data:image/png;base64,{{seed_qr}}" width = "300", height = "300">
 
 <div class="noprint">
   <table width=500px>
@@ -77,11 +80,6 @@
 {{ qr_string }}
 </textarea>
 
-    <br><br>
-
-    <button onClick="window.location.reload();">Generate</button>
-
-    <button onClick="window.print();">Print</button>
 </div>
 
   </center>
