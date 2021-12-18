@@ -1,88 +1,89 @@
 <html>
 
 <head>
-
-  <style>
-    html *
+<style>
+  html *
+      {
+         color: #000 !important;
+         font-family: Arial !important;
+      }
+      p.small
         {
-           color: #000 !important;
-           font-family: Arial !important;
+          font-size: 10px;
         }
-        p.small
-          {
-            font-size: 10px;
-          }
-          @media print {
-             .noprint {
-                visibility: hidden;
-             }
-             @page {
-                 size: auto;
-                 margin: 0;
-             }
-          }
-  </style>
-
+        @media print {
+           .noprint {
+              visibility: hidden;
+           }
+           @page {
+               size: auto;
+               margin: 0;
+           }
+        }
+</style>
 </head>
 
-  <center>
-
-
-      <div class="noprint">
-      <h1 class="noprint">Seed Print v0.1</h1>
-      <button onClick="window.location.reload();">Generate</button>
-      <button onClick="window.print();">Print</button>
-      <hr class="noprint">
-    </div>
-         <img src="data:image/png;base64,{{seed_qr}}" width = "300", height = "300">
+<center>
 
 <div class="noprint">
-  <table width=500px>
+<h1 class="noprint">SeedPrint v0.1.1</h1>
+<button onClick="window.location.reload();">Generate</button>
+<button onClick="window.print();">Print</button>
+<hr class="noprint">
+</div>
 
-    <tr>
-      <td>
-        {% for word in words.split()[0:6] %}
-          <p><b>{{ loop.index }}</b>. {{ word }}</p>
-        {% endfor %}
-      </td>
+<h3 class="noprint">⚠️ COPY SECRETS AT YOUR OWN RISK ⚠️</h3>
 
-      <td>
-        {% for word in words.split()[6:12] %}
-          <p><b>{{ loop.index + 6}}</b>. {{ word }}</p>
-        {% endfor %}
-      </td>
+<img src="data:image/png;base64,{{ seed_qr_base64 }}" width="450" height="450">
 
-      <td>
-        {% for word in words.split()[12:18] %}
-          <p><b>{{ loop.index + 12}}</b>. {{ word }}</p>
-        {% endfor %}
-      </td>
-
-      <td>
-        {% for word in words.split()[18:24] %}
-          <p><b>{{ loop.index + 18 }}</b>. {{ word }}</p>
-        {% endfor %}
-      </td>
-    </tr>
-
-  </table>
-
+<div class="noprint">
 <br>
+<h3>Seed QR Value</h3>
+<textarea disabled rows="2" cols="150">
+{{ seed_qr_string }}
+</textarea>
 
-  <h3>⚠️ Copy at your own risk ⚠️</h3>
-<textarea disabled rows="5" cols="100">
+<h3>Seed Phrase</h3>
+<textarea disabled rows="4" cols="150">
 {{ words }}
 </textarea>
 
-  <br><br>
-
-<textarea disabled rows="2" cols="100">
-{{ qr_string }}
+<h3>Entropy<h3>
+<textarea disabled rows="2" cols="150">
+{{ entropy }}
 </textarea>
 
-</div>
+<h3>Seed<h3>
+<textarea disabled rows="4" cols="150">
+{{ seed }}
+</textarea>
 
-  </center>
+<h3>Derivation Path<h3>
+<textarea disabled rows="4" cols="150">
+{{ derivation_path }}
+</textarea>
+
+<h3>Fingerprint<h3>
+<textarea disabled rows="4" cols="150">
+{{ fingerprint }}
+</textarea>
+
+<h3>XPriv<h3>
+<textarea disabled rows="4" cols="150">
+{{ xpriv }}
+</textarea>
+
+<h3>XPub<h3>
+<textarea disabled rows="4" cols="150">
+{{ xpub }}
+</textarea>
+<br><br>
+<hr>
+
+<p class="small">Created by <a href='https://github.com/CypherToad/about'><strong>Cypher Toad</strong></a> @ 2021</p>
+
+</center>
+</div>
 
 
 </html>

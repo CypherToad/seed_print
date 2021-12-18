@@ -1,48 +1,50 @@
 #!/usr/bin/env python3
 
-# Built in python libraries
 import json
 import base64
+import random
 from io import BytesIO
-from hashlib import sha256
+import socket
+from binascii import unhexlify, hexlify
 
-# Trusting Trezor's for randopm wallet creations
-from mnemonic import Mnemonic
-
-# Thanks @KeithMukai for the suggestion!
-# https://twitter.com/KeithMukai/status/1470571942000443392
-# Confirm we are offline
-import requests
+# Trusting SeedSigner's embit library
+# https://github.com/SeedSigner/embit
+from embit import bip32
+from embit import bip39
+from embit import wordlists
+from embit import script
+from embit.networks import NETWORKS
 
 # Trusting qrcode library as offline qr code creation
 import qrcode
 
-# Trusting Flask as simple web interface which can be easily printed or stored as pdf
+# Trusting Flask as simple web interface
 from flask import Flask, render_template, request
 
 
 app = Flask(__name__)
-mnemo = Mnemonic("english")
+wordlist = wordlists.bip39.WORDLIST
 
 
-# load our words.txt which was fetched from Trezor's github
-# https://github.com/trezor/python-mnemonic/blob/master/src/mnemonic/wordlist/english.txt
-with open('words.txt') as f:
-    wordlist = [ i for i in f.read().split('\n') if i ]
+def is_online():
+    """
+    Check if we are online
 
-# confirm we have our 2048 words
-if len(wordlist) != 2048:
-    raise Exception("Word list is not correct length: %s" % len(wordlist))
+    Thanks @KeithMukai for the suggestion!
+    https://twitter.com/KeithMukai/status/1470571942000443392
+    """
 
-# confirm our checksum matches
-checksum = sha256(json.dumps(wordlist).encode()).hexdigest()
-if checksum != '9944a25d756463cef4038bd1b5e312932ec874f0236be654a977fa7cc49fb03a':
-    raise Exception("Checksum mistmatch!")
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect(('1.1.1.1', 53))
+        return True
+    except OSError:
+        return False
 
 
 def seed_qr_string(words):
     """
-    Return a string representation of our words for seed_signer
+    Return the string value of our SeedQR.
     """
 
     return ''.join([str(wordlist.index(w)).zfill(4) for w in words.split()])
@@ -50,14 +52,14 @@ def seed_qr_string(words):
 
 def seed_qr_base64(words):
     """
-    Return a base64 PNG encoding of our seed_qr.
+    Return a base64 PNG image of our SeedQR.
     """
 
     # create a qrcode of our seed_qr_string
     img = qrcode.make(
         seed_qr_string(words))
 
-    # generate a
+    # generate a base64 encoding of our png image
     # https://jdhao.github.io/2020/03/17/base64_opencv_pil_image_conversion/
     im_file = BytesIO()
     img.save(im_file, format="PNG")
@@ -66,27 +68,52 @@ def seed_qr_base64(words):
     return im_b64.decode()
 
 
+def get_seed_phrase(entropy):
+    """
+    Generate random seedphrase
+    """
+
+    words = bip39.mnemonic_from_bytes(entropy)
+    return words
+
+
 @app.route("/")
 def home():
     """
-    Main home page which generates random wallets
+    Main home page which generates random seed phrases
     """
 
-    # generate a strong wallet
-    words = mnemo.generate(strength=256)
-    qr_string = seed_qr_string(words)
+    if is_online():
+        return render_template('panic.html')
 
-    # Thanks for the suggestion @KeithMukai
-    # https://twitter.com/KeithMukai/status/1470571942000443392
-    try:
-        if requests.get('http://bitcoin.org'):
-            return render_template('panic.html')
-    except:
-        pass
+    params = {}
 
-    return render_template(
-        'index.html', words=words, seed_qr=seed_qr_base64(words),
-        qr_string=qr_string)
+    # generate a random seed phrase
+    params['entropy'] = random.randbytes(32)
+
+    # seedQR our our entropy
+    params['words'] = get_seed_phrase(params['entropy'])
+    params['seed_qr_string'] = seed_qr_string(params['words'])
+    params['seed_qr_base64'] = seed_qr_base64(params['words'])
+
+    params['seed'] = bip39.mnemonic_to_seed(params['words'])
+
+    params['derivation_path'] = "m/84'/0'/0'"
+
+    version = bip32.detect_version(params['derivation_path'], default="xpub",  network=NETWORKS['main'])
+    root = bip32.HDKey.from_seed(params['seed'], NETWORKS['main']['xprv'])
+
+    params['fingerprint'] = hexlify(root.child(0).fingerprint).decode()
+
+    xpriv = root.derive(params['derivation_path'])
+    xpub = xpriv.to_public()
+
+    params['xpriv'] = xpriv
+    params['xpub'] = xpub.to_string(version=version)
+
+
+
+    return render_template('index.html', **params, wordlist=wordlist)
 
 
 if __name__ == "__main__":
