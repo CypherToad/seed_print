@@ -1,35 +1,103 @@
 #!/usr/bin/env python3
 
-import json
-import base64
+import os
 import random
-from io import BytesIO
 import socket
 from binascii import unhexlify, hexlify
 
-# Trusting SeedSigner's embit library
-# https://github.com/SeedSigner/embit
-from embit import bip32
-from embit import bip39
-from embit import wordlists
-from embit import script
-from embit.networks import NETWORKS
-
-# Trusting qrcode library as offline qr code creation
+import click
 import qrcode
 
-# Trusting Flask as simple web interface
-from flask import Flask, render_template, request
+# SeedSigner embit library
+# A minimal bitcoin library for MicroPython and Python3 with a focus on embedded systems
+from embit import bip32
+from embit import bip39
+from embit import script
+from embit import wordlists
+from embit.networks import NETWORKS
+from embit.ec import PublicKey
 
 
-app = Flask(__name__)
-wordlist = wordlists.bip39.WORDLIST
+NETWORK = NETWORKS['main']
+
+
+class SeedPhrase(object):
+
+    def __init__(self, words=None, entropy=b'', derivation_path="m/84'/0'/0'"):
+        """
+        class constructor
+        """
+
+        # Generate or set word list
+        self.entropy = unhexlify(entropy)
+        if not words:
+            if not entropy:
+                self.entropy = random.randbytes(32)
+            self.words = bip39.mnemonic_from_bytes(self.entropy)
+        else:
+            self.words = words
+
+        self.wordlist = wordlists.bip39.WORDLIST
+
+        self.network = NETWORKS['main']
+        self.derivation_path = derivation_path
+
+    @property
+    def seed(self):
+        """
+        Return seed
+        """
+
+        return bip39.mnemonic_to_seed(self.words)
+
+    @property
+    def root(self):
+        """
+        Return root
+        """
+
+        return bip32.HDKey.from_seed(self.seed)
+
+    @property
+    def fingerprint(self):
+        """
+        Return fingerprint
+        """
+
+        return self.root.child(0).fingerprint
+
+    @property
+    def xpriv(self):
+        """
+        Return xpriv
+        """
+
+        return self.root.derive(self.derivation_path)
+
+    @property
+    def xpub(self):
+        """
+        Return xpub
+        """
+
+        return self.xpriv.to_public()
+
+    @property
+    def seed_qr(self):
+        """
+        Return a string representation our seedqr
+        """
+
+        # make a list of wordlist position for our words
+        pos = [str(self.wordlist.index(w)).zfill(4) for w in self.words.split()]
+
+        # return list as a single string
+        return ''.join(pos)
 
 
 def is_online():
     """
-    Check if we are online
-
+    Check if we are online by connecting to cloudflare dns servers.
     Thanks @KeithMukai for the suggestion!
     https://twitter.com/KeithMukai/status/1470571942000443392
     """
@@ -42,79 +110,56 @@ def is_online():
         return False
 
 
-def seed_qr_string(words):
+@click.command()
+def main():
     """
-    Return the string value of our SeedQR.
-    """
-
-    return ''.join([str(wordlist.index(w)).zfill(4) for w in words.split()])
-
-
-def seed_qr_base64(words):
-    """
-    Return a base64 PNG image of our SeedQR.
-    """
-
-    # create a qrcode of our seed_qr_string
-    img = qrcode.make(
-        seed_qr_string(words))
-
-    # generate a base64 encoding of our png image
-    # https://jdhao.github.io/2020/03/17/base64_opencv_pil_image_conversion/
-    im_file = BytesIO()
-    img.save(im_file, format="PNG")
-    im_b64 = base64.b64encode(im_file.getvalue())
-
-    return im_b64.decode()
-
-
-def get_seed_phrase(entropy):
-    """
-    Generate random seedphrase
-    """
-
-    words = bip39.mnemonic_from_bytes(entropy)
-    return words
-
-
-@app.route("/")
-def home():
-    """
-    Main home page which generates random seed phrases
+    Generates a seed phrase
     """
 
     if is_online():
-        return render_template('panic.html')
+        raise Exception('You should not be connected to the internet!')
 
-    params = {}
+    # generate a strong wallet
+    seedphrase = SeedPhrase()
 
-    # generate a random seed phrase
-    params['entropy'] = random.randbytes(32)
+    print()
+    print('entropy: %s' % hexlify(seedphrase.entropy).decode())
+    print('seed: %s' % hexlify(seedphrase.seed).decode())
 
-    # seedQR our our entropy
-    params['words'] = get_seed_phrase(params['entropy'])
-    params['seed_qr_string'] = seed_qr_string(params['words'])
-    params['seed_qr_base64'] = seed_qr_base64(params['words'])
+    # print out seed phrase in columns
+    print()
+    print('seed phrase:\n')
+    c = 0
+    for n, _word in enumerate(seedphrase.words.split(), 1):
+        word = '%s: %s' % (str(n).rjust(2), _word)
+        print(word.ljust(25), end='')
+        c += 1
+        # new line and reset count
+        if c >= 4:
+            print()
+            c = 0
 
-    params['seed'] = bip39.mnemonic_to_seed(params['words'])
+    # Thanks @simulx
+    # https://twitter.com/simulx/status/1470894394232516608
+    os.system('qr --ascii "%s"' % seedphrase.seed_qr)
+    print('seed QR: %s' % seedphrase.seed_qr)
+    print('-' * 120)
 
-    params['derivation_path'] = "m/84'/0'/0'"
+    print()
+    print('fingerprint: %s' % hexlify(seedphrase.fingerprint).decode())
+    print('derivation_path: %s' % seedphrase.derivation_path)
+    print('xpriv: %s' % seedphrase.xpriv)
+    print('xpub: %s' % seedphrase.xpub)
+    os.system('qr --ascii "%s"' % seedphrase.xpub)
+    print()
 
-    version = bip32.detect_version(params['derivation_path'], default="xpub",  network=NETWORKS['main'])
-    root = bip32.HDKey.from_seed(params['seed'], NETWORKS['main']['xprv'])
+    # print out a couple addresses using this key
+    print('Adresses:')
+    for i in range(10):
+        print(script.p2wpkh(seedphrase.xpub.derive('0/%s' % i).get_public_key()).address())
 
-    params['fingerprint'] = hexlify(root.child(0).fingerprint).decode()
-
-    xpriv = root.derive(params['derivation_path'])
-    xpub = xpriv.to_public()
-
-    params['xpriv'] = xpriv
-    params['xpub'] = xpub.to_string(version=version)
-
-
-
-    return render_template('index.html', **params, wordlist=wordlist)
+    print()
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    main()
